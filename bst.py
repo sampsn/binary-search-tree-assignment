@@ -3,52 +3,29 @@ class Node:
         self.value = value
         self.left = None
         self.right = None
-        self.position = None
 
 
 class BST:
     def __init__(self):
         self.root = None
-        self.height = None
-        self.size = 0
 
-    def insert(self, new_node: object) -> None:
+    def insert(self, new_value: float) -> None:
         if self.root is None:
-            self.root = new_node
-            new_node.position = 0
-            self.height = 0
-            self.size += 1
+            self.root = Node(value=new_value)
             return
 
         current_node = self.root
-        current_height = 0
         while True:
             # print(self.height)
-            if new_node.value < current_node.value and current_node.left is not None:
+            if new_value < current_node.value and current_node.left is not None:
                 current_node = current_node.left
-                current_height += 1
-                if current_height > self.height:
-                    self.height = current_height
-            elif new_node.value > current_node.value and current_node.right is not None:
+            elif new_value > current_node.value and current_node.right is not None:
                 current_node = current_node.right
-                current_height += 1
-                if current_height > self.height:
-                    self.height = current_height
-            elif new_node.value < current_node.value:
-                new_node.position = self.size
-                current_node.left = new_node
-                self.size += 1
-                current_height += 1
-                if current_height > self.height:
-                    self.height = current_height
+            elif new_value < current_node.value:
+                current_node.left = Node(value=new_value)
                 break
-            elif new_node.value > current_node.value:
-                new_node.position = self.size
-                current_node.right = new_node
-                self.size += 1
-                current_height += 1
-                if current_height > self.height:
-                    self.height = current_height
+            elif new_value > current_node.value:
+                current_node.right = Node(value=new_value)
                 break
 
     def search(self, value: int) -> bool:
@@ -71,7 +48,7 @@ class BST:
 
         ordered_list = []
 
-        def _rec_in_order_traversal(node: object):
+        def _rec_in_order_traversal(node: Node):
             if node.left is not None:
                 _rec_in_order_traversal(node.left)
 
@@ -106,9 +83,20 @@ class BST:
             else:
                 current = current.right
 
-    def get_height(self) -> int:
+    def height(self) -> int:
         """returns the depth of the tree (how far is the furthest node from the root node?)"""
-        return self.height
+
+        def _height(root):
+            if root is None:
+                return -1
+
+            left_height = _height(root.left)
+
+            right_height = _height(root.right)
+
+            return max(left_height, right_height) + 1
+
+        return _height(self.root)
 
     def count_leaves(self) -> int:
         """returns the number of leaf nodes in the tree (leaf nodes are without any children)"""
@@ -130,83 +118,34 @@ class BST:
 
     def serialize(self) -> str:
         """turns the BST into a string"""
-        ordered_objects = []
 
-        def _rec_serialize(node: object) -> int:
-            if node.left is not None:
-                _rec_serialize(node.left)
+        def _rec_serialize(root):
+            if root is None:
+                return "None,"
+            return (
+                str(root.value)
+                + ","
+                + _rec_serialize(root.left)
+                + _rec_serialize(root.right)
+            )
 
-            ordered_objects.append(node)
-
-            if node.right is not None:
-                _rec_serialize(node.right)
-
-        _rec_serialize(self.root)
-
-        original_order = [None] * len(ordered_objects)
-        for node in ordered_objects:
-            original_order[node.position] = node.value
-
-        # serialized_str = ",".join([str(value) for value in original_order])
-
-        serialized_str = ",".join(map(lambda x: str(x), original_order))
+        serialized_str = _rec_serialize(self.root)
 
         return serialized_str
 
-    def deserialize(self, tree: str) -> object:
+    def deserialize(self, tree: str) -> None:
         """deserialize a serialized BST (take a string version of a BST and
         make an empty BST filled with those values). The new tree should match
         the tree that was serialized."""
 
-        value_list = tree.split(",")
+        def build_tree(values):
+            value = next(values)
+            if value == "None":
+                return None
+            node = Node(int(value))
+            node.left = build_tree(values)
+            node.right = build_tree(values)
+            return node
 
-        nodes = [Node(i) for i in value_list]
-
-        new_bst = BST()
-        for node in nodes:
-            new_bst.insert(node)
-
-        return new_bst
-
-    # Extra Challenge
-    def delete(self, value: int) -> object:
-        serialized = self.serialize()
-        new_values = "".join(serialized.split(str(value) + ","))
-
-        self.root = self.deserialize(new_values).root
-
-        return self
-
-    # EXTRA EXTRA Challenge
-    def balance(self) -> None:
-        in_order_list = self.in_order_traversal()
-
-        balanced_list = []
-
-        def _rec_balance(values: list[int]):
-            if len(values) == 2:
-                balanced_list.append(values[0])
-                balanced_list.append(values[1])
-                return
-            if len(values) == 1:
-                balanced_list.append(values[0])
-                return
-
-            # print(str(values) + "top")
-            if len(values) % 2 == 0:
-                mid = (len(values) // 2) - 1
-            else:
-                mid = len(values) // 2
-            mid_value = values[mid]
-            balanced_list.append(mid_value)
-
-            left_side = values[:mid]
-            right_side = values[mid + 1 :]
-            _rec_balance(left_side)
-            _rec_balance(right_side)
-
-        _rec_balance(in_order_list)
-
-        serialized_str = ",".join(map(lambda x: str(x), balanced_list))
-
-        self.root = self.deserialize(serialized_str).root
+        values = iter(tree.split(","))
+        self.root = build_tree(values)
